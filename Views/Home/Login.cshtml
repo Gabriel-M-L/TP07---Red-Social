@@ -1,0 +1,24 @@
+@{
+    ViewData["Title"] = "Iniciar sesión";
+}
+
+<div class="login-card card shadow-sm">
+    <div class="card-body">
+        <h1 class="h3 text-center text-gradient mb-4">Iniciar sesión</h1>
+        <div class="alert alert-warning">@ViewBag.MensajeError</div>
+        <div class="alert alert-success">@ViewBag.MensajeExito</div>
+        <form action="@Url.Action("VerificarSesion", "Home")" method="post" onsubmit="return VerificarSesion()">
+            <div class="mb-3">
+                <p class="form-label">Nombre de usuario</p>
+                <input type="text" class="form-control" name="nombreUsuario" id="nombreUsuario" placeholder="Ingresa tu usuario">
+            </div>
+            <div class="mb-3">
+                <p class="form-label">Contraseña</p>
+                <input type="password" class="form-control" name="password" id="password" placeholder="Ingresa tu contraseña">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Iniciar sesión</button>
+            <p id="error"></p>
+        </form>
+        <p class="text-center mt-3 mb-0">¿No tenes cuenta? <a href="@Url.Action("Registro", "Home")">Crear una cuenta</a></p>
+    </div>
+</div>
