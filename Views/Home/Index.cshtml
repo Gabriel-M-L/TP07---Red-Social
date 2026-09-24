@@ -1,8 +1,335 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model List<TP07_Martinez_Loufer.Models.Publicacion>
+@{
+    ViewData["Title"] = "Inicio";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+@Html.AntiForgeryToken()
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-0">Publicaciones</h1>
+        <small class="text-muted">Últimas 10 publicaciones</small>
+    </div>
+    @if (ViewBag.usuario != null)
+    {
+        <span class="badge bg-secondary rounded-pill">@ViewBag.usuario.NombreUsuario</span>
+    }
 </div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4">
+        <h2 class="h4 mb-3">Crear publicación</h2>
+        <form asp-action="CrearPublicacion" method="post">
+            <div class="mb-3">
+                <label for="titulo" class="form-label">Título</label>
+                <input type="text" class="form-control" id="titulo" name="titulo" placeholder="Ingrese el título" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="descripcion" class="form-label">Descripción</label>
+                <textarea class="form-control" id="descripcion" name="descripcion" rows="3" placeholder="Escriba la descripción" required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="imagen" class="form-label">Imagen</label>
+                <input type="text" class="form-control" id="imagen" name="imagen" placeholder="Nombre de la imagen (por ejemplo: paisaje.jpg)" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Publicar</button>
+        </form>
+    </div>
+</div>
+
+<div id="contenedorPublicaciones">
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info">No hay publicaciones para mostrar.</div>
+    }
+    else
+    {
+        @foreach (var publicacion in Model)
+        {
+            var imagen = string.IsNullOrWhiteSpace(publicacion.Imagen)
+                ? $"https://placehold.co/900x500?text={Uri.EscapeDataString(publicacion.Titulo)}"
+                : Url.Content($"~/images/{publicacion.Imagen}");
+
+            <article class="card shadow-sm mb-4 border-0" data-publicacion-id="@publicacion.Id">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h2 class="h4 mb-1">@publicacion.Titulo</h2>
+                            <p class="text-muted mb-0">
+                                Por @publicacion.UsuarioNombre · @publicacion.FechaPublicacion.ToString("dd/MM/yyyy HH:mm")
+                            </p>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">
+                            <span class="js-like-count">@publicacion.CantidadMeGustas</span> Me gusta
+                        </span>
+                    </div>
+
+                    <img src="@imagen" class="img-fluid rounded mb-3" alt="@publicacion.Titulo" style="max-height: 420px; object-fit: cover; width: 100%;" />
+
+                    <p class="lead mb-3">@publicacion.Descripcion</p>
+
+                    <div class="d-flex justify-content-between align-items-center border-top border-bottom py-3">
+                        <button
+                            type="button"
+                            class="btn @(publicacion.MeGustaUsuario ? "btn-danger" : "btn-outline-danger") js-like-button"
+                            data-publicacion-id="@publicacion.Id"
+                            data-liked="@publicacion.MeGustaUsuario.ToString().ToLowerInvariant()">
+                            <span>❤</span> @(publicacion.MeGustaUsuario ? "Ya no me gusta" : "Me Gusta")
+                        </button>
+
+                        <span class="text-muted fw-semibold"><span class="js-like-count-total">@publicacion.CantidadMeGustas</span> me gustas</span>
+                    </div>
+
+                    <div class="mt-4">
+                        <h3 class="h5">Comentarios</h3>
+
+                        @if (publicacion.Comentarios != null && publicacion.Comentarios.Any())
+                        {
+                            <ul class="list-group list-group-flush mb-3 js-comentarios-list">
+                                @foreach (var comentario in publicacion.Comentarios)
+                                {
+                                    <li class="list-group-item px-0 js-comentario-item">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong>@comentario.UsuarioNombre</strong>
+                                            <small class="text-muted">@comentario.FechaComentario.ToString("dd/MM/yyyy HH:mm")</small>
+                                        </div>
+                                        <div>@comentario.Texto</div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p class="text-muted js-empty-comments">Aún no hay comentarios. ¡Sé el primero!</p>
+                            <ul class="list-group list-group-flush mb-3 js-comentarios-list" style="display:none;"></ul>
+                        }
+
+                        <div class="mt-3">
+                            <div class="input-group">
+                                <textarea class="form-control js-comment-text" rows="2" placeholder="Escribí un comentario..." required></textarea>
+                                <button type="button" class="btn btn-primary js-comentar-btn" data-publicacion-id="@publicacion.Id">Comentar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        }
+    }
+</div>
+
+<div class="text-center mt-3">
+    <button id="btnVerMas" type="button" class="btn btn-outline-primary @(ViewBag.HayMasPublicaciones == true ? "" : "d-none")">Ver más</button>
+</div>
+
+@section Scripts {
+    <script>
+        let desde = @(Model != null ? Model.Count : 0);
+
+        function renderPublicacion(publicacion) {
+            const article = document.createElement('article');
+            article.className = 'card shadow-sm mb-4 border-0';
+            article.dataset.publicacionId = publicacion.id;
+
+            const comentariosHtml = (publicacion.comentarios && publicacion.comentarios.length > 0)
+                ? publicacion.comentarios.map(function (comentario) {
+                    return `
+                        <li class="list-group-item px-0 js-comentario-item">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong>${comentario.usuarioNombre}</strong>
+                                <small class="text-muted">${comentario.fechaComentario}</small>
+                            </div>
+                            <div>${comentario.texto}</div>
+                        </li>
+                    `;
+                }).join('')
+                : '';
+
+            const comentariosMarkup = publicacion.comentarios && publicacion.comentarios.length > 0
+                ? `<ul class="list-group list-group-flush mb-3 js-comentarios-list">${comentariosHtml}</ul>`
+                : `<p class="text-muted js-empty-comments">Aún no hay comentarios. ¡Sé el primero!</p><ul class="list-group list-group-flush mb-3 js-comentarios-list" style="display:none;"></ul>`;
+
+            article.innerHTML = `
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h2 class="h4 mb-1">${publicacion.titulo}</h2>
+                            <p class="text-muted mb-0">Por ${publicacion.usuarioNombre} · ${publicacion.fechaPublicacion}</p>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">
+                            <span class="js-like-count">${publicacion.cantidadMeGustas}</span> Me gusta
+                        </span>
+                    </div>
+
+                    <img src="${publicacion.imagen}" class="img-fluid rounded mb-3" alt="${publicacion.titulo}" style="max-height: 420px; object-fit: cover; width: 100%;" />
+
+                    <p class="lead mb-3">${publicacion.descripcion}</p>
+
+                    <div class="d-flex justify-content-between align-items-center border-top border-bottom py-3">
+                        <button type="button" class="btn ${publicacion.meGustaUsuario ? 'btn-danger' : 'btn-outline-danger'} js-like-button" data-publicacion-id="${publicacion.id}" data-liked="${publicacion.meGustaUsuario}">
+                            <span>❤</span> ${publicacion.meGustaUsuario ? 'Ya no me gusta' : 'Me Gusta'}
+                        </button>
+
+                        <span class="text-muted fw-semibold"><span class="js-like-count-total">${publicacion.cantidadMeGustas}</span> me gustas</span>
+                    </div>
+
+                    <div class="mt-4">
+                        <h3 class="h5">Comentarios</h3>
+                        ${comentariosMarkup}
+
+                        <div class="mt-3">
+                            <div class="input-group">
+                                <textarea class="form-control js-comment-text" rows="2" placeholder="Escribí un comentario..." required></textarea>
+                                <button type="button" class="btn btn-primary js-comentar-btn" data-publicacion-id="${publicacion.id}">Comentar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return article;
+        }
+
+        const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+        const btnVerMas = document.getElementById('btnVerMas');
+
+        document.addEventListener('click', function (event) {
+            const likeButton = event.target.closest('.js-like-button');
+            if (likeButton) {
+                const publicacionId = likeButton.dataset.publicacionId;
+                const formData = new URLSearchParams();
+                formData.append('publicacionId', publicacionId);
+
+                fetch('/Home/ToggleLike', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'RequestVerificationToken': tokenInput ? tokenInput.value : ''
+                    },
+                    body: formData.toString()
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert(data.message || 'No se pudo actualizar el Me Gusta.');
+                        return;
+                    }
+
+                    const liked = Boolean(data.liked);
+                    const totalLikes = Number(data.likes || 0);
+                    const article = likeButton.closest('article');
+
+                    likeButton.dataset.liked = liked ? 'true' : 'false';
+                    likeButton.classList.toggle('btn-danger', liked);
+                    likeButton.classList.toggle('btn-outline-danger', !liked);
+                    likeButton.innerHTML = '<span>❤</span> ' + (liked ? 'Ya no me gusta' : 'Me Gusta');
+
+                    if (article) {
+                        article.querySelectorAll('.js-like-count, .js-like-count-total').forEach(function (countNode) {
+                            countNode.textContent = totalLikes;
+                        });
+                    }
+                })
+                .catch(function () {
+                    alert('Ocurrió un error al procesar el Me Gusta.');
+                });
+
+                return;
+            }
+
+            const commentButton = event.target.closest('.js-comentar-btn');
+            if (commentButton) {
+                const article = commentButton.closest('article');
+                const publicacionId = commentButton.dataset.publicacionId;
+                const textarea = article.querySelector('.js-comment-text');
+                const texto = (textarea ? textarea.value : '').trim();
+
+                if (!texto) {
+                    alert('Escribí un comentario antes de enviar.');
+                    return;
+                }
+
+                const formData = new URLSearchParams();
+                formData.append('publicacionId', publicacionId);
+                formData.append('texto', texto);
+
+                fetch('/Home/AgregarComentario', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'RequestVerificationToken': tokenInput ? tokenInput.value : ''
+                    },
+                    body: formData.toString()
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert(data.message || 'No se pudo guardar el comentario.');
+                        return;
+                    }
+
+                    const comentario = data.comentario;
+                    const comentariosList = article.querySelector('.js-comentarios-list');
+                    const emptyMessage = article.querySelector('.js-empty-comments');
+
+                    if (emptyMessage) {
+                        emptyMessage.remove();
+                    }
+
+                    if (comentariosList) {
+                        const item = document.createElement('li');
+                        item.className = 'list-group-item px-0 js-comentario-item';
+                        item.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong>${comentario.usuarioNombre}</strong>
+                                <small class="text-muted">${comentario.fechaComentario}</small>
+                            </div>
+                            <div>${comentario.texto}</div>
+                        `;
+                        comentariosList.appendChild(item);
+                        comentariosList.style.display = 'block';
+                    }
+
+                    if (textarea) {
+                        textarea.value = '';
+                    }
+                })
+                .catch(function () {
+                    alert('Ocurrió un error al enviar el comentario.');
+                });
+
+                return;
+            }
+
+            if (event.target.closest('#btnVerMas')) {
+                btnVerMas.disabled = true;
+                btnVerMas.textContent = 'Cargando...';
+
+                fetch('/Home/ObtenerMas?desde=' + desde)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success || !data.publicaciones || data.publicaciones.length === 0) {
+                            btnVerMas.classList.add('d-none');
+                            return;
+                        }
+
+                        const contenedor = document.getElementById('contenedorPublicaciones');
+                        data.publicaciones.forEach(function (publicacion) {
+                            contenedor.appendChild(renderPublicacion(publicacion));
+                        });
+
+                        desde += data.publicaciones.length;
+                        btnVerMas.disabled = false;
+                        btnVerMas.textContent = 'Ver más';
+                    })
+                    .catch(function () {
+                        alert('Ocurrió un error al cargar más publicaciones.');
+                        btnVerMas.disabled = false;
+                        btnVerMas.textContent = 'Ver más';
+                    });
+            }
+        });
+    </script>
+}

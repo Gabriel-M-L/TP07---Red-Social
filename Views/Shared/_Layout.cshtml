@@ -27,6 +27,14 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
                         </li>
                     </ul>
+
+                    @if (Context.Session.GetString("id") != null)
+                    {
+                        <form asp-area="" asp-controller="Home" asp-action="Logout" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-danger">Cerrar sesión</button>
+                        </form>
+                    }
                 </div>
             </div>
         </nav>
