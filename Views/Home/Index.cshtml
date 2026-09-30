@@ -19,7 +19,7 @@
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-body p-4">
         <h2 class="h4 mb-3">Crear publicación</h2>
-        <form asp-action="CrearPublicacion" method="post">
+        <form asp-action="CrearPublicacion" method="post" enctype="multipart/form-data">
             <div class="mb-3">
                 <label for="titulo" class="form-label">Título</label>
                 <input type="text" class="form-control" id="titulo" name="titulo" placeholder="Ingrese el título" required>
@@ -31,8 +31,8 @@
             </div>
 
             <div class="mb-3">
-                <label for="imagen" class="form-label">Imagen</label>
-                <input type="text" class="form-control" id="imagen" name="imagen" placeholder="Nombre de la imagen (por ejemplo: paisaje.jpg)" required>
+                <label for="archivo" class="form-label">Imagen</label>
+                <input type="file" class="form-control" id="archivo" name="archivo" accept="image/*" required>
             </div>
 
             <button type="submit" class="btn btn-primary">Publicar</button>

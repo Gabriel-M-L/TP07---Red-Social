@@ -141,7 +141,7 @@ public class HomeController : Controller
     }
 
     [HttpPost]
-    public IActionResult CrearPublicacion(string titulo, string descripcion, string imagen)
+    public IActionResult CrearPublicacion(string titulo, string descripcion, IFormFile archivo)
     {
         if (HttpContext.Session.GetString("id") == null)
         {
@@ -151,12 +151,24 @@ public class HomeController : Controller
         int idUsuario = int.Parse(HttpContext.Session.GetString("id"));
         BD bd = new BD();
 
-        if (string.IsNullOrWhiteSpace(titulo) || string.IsNullOrWhiteSpace(descripcion) || string.IsNullOrWhiteSpace(imagen))
+        if (string.IsNullOrWhiteSpace(titulo) || string.IsNullOrWhiteSpace(descripcion) || archivo == null || archivo.Length == 0)
         {
-            return RedirectToAction("Index", new { mensajeError = "Todos los campos son obligatorios" });
+            return RedirectToAction("Index", new { mensajeError = "Todos los campos son obligatorios y debe subir una imagen" });
         }
 
-        bd.CrearPublicacion(idUsuario, titulo.Trim(), descripcion.Trim(), imagen.Trim());
+        string carpetaDestino = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+        Directory.CreateDirectory(carpetaDestino);
+
+        string extension = Path.GetExtension(archivo.FileName);
+        string nombreArchivo = $"{Guid.NewGuid()}{extension}";
+        string rutaCompleta = Path.Combine(carpetaDestino, nombreArchivo);
+
+        using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+        {
+            archivo.CopyTo(stream);
+        }
+
+        bd.CrearPublicacion(idUsuario, titulo.Trim(), descripcion.Trim(), nombreArchivo);
         return RedirectToAction("Index");
     }
 }
