@@ -8,23 +8,24 @@ public class BD
 
     public int ValidarUsuario(string nombreUsuario, string Contraseña)
     {
+        int id = 0;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
-            int id = 0;
             string query = "SELECT Id FROM Usuarios WHERE NombreUsuario = @nombreUsuario AND Contraseña = @Contraseña";
             id = connection.QueryFirstOrDefault<int>(query, new { nombreUsuario, Contraseña });
-            return id;
         }
+        return id;
     }
 
     public string BuscarNombreUsuario(string nombreUsuario)
     {
+        string encontrado;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             string query = "SELECT NombreUsuario FROM Usuarios WHERE NombreUsuario = @nombreUsuario";
-            string encontrado = connection.QueryFirstOrDefault<string>(query, new { nombreUsuario });
-            return encontrado;
+            encontrado = connection.QueryFirstOrDefault<string>(query, new { nombreUsuario }); 
         }
+        return encontrado;
     }
     public bool RegistrarUsuario(string nombreUsuario, string Contraseña, string nombre, string apellido)
     {
@@ -42,16 +43,18 @@ public class BD
 
     public Usuario ObtenerUsuarioPorId(int id)
     {
+        Usuario usuario;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             string query = "SELECT * FROM Usuarios WHERE Id = @id";
-            Usuario usuario = connection.QueryFirstOrDefault<Usuario>(query, new { id });
-            return usuario;
+            usuario = connection.QueryFirstOrDefault<Usuario>(query, new { id });
         }
+        return usuario;
     }
 
     public List<Publicacion> ObtenerPublicacionesRecientes(int cantidad = 10)
     {
+        List<Publicacion> publicaciones;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             string query = @"
@@ -68,12 +71,14 @@ public class BD
                 INNER JOIN Usuarios u ON u.Id = p.IdUsuario
                 ORDER BY p.FechaPublicacion DESC";
 
-            return connection.Query<Publicacion>(query, new { cantidad }).ToList();
+            publicaciones = connection.Query<Publicacion>(query, new { cantidad }).ToList();
         }
+        return publicaciones;
     }
 
     public List<Comentario> ObtenerComentariosPorPublicacion(int idPublicacion)
     {
+        List<Comentario> comentarios;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             string query = @"
@@ -89,26 +94,35 @@ public class BD
                 WHERE c.IdPublicacion = @idPublicacion
                 ORDER BY c.FechaComentario ASC";
 
-            return connection.Query<Comentario>(query, new { idPublicacion }).ToList();
+            comentarios =  connection.Query<Comentario>(query, new { idPublicacion }).ToList();
         }
+        return comentarios;
     }
 
     public bool RegistrarLike(int idPublicacion, int idUsuario)
     {
+        int existe;
+        int filasAfectadas = 0;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             string verificarQuery = @"SELECT COUNT(*) FROM PublicacionesMeGusta WHERE [IdPublicación] = @idPublicacion AND IdUsuario = @idUsuario";
-            int existe = connection.ExecuteScalar<int>(verificarQuery, new { idPublicacion, idUsuario });
+            existe = connection.ExecuteScalar<int>(verificarQuery, new { idPublicacion, idUsuario });
 
             if (existe > 0)
             {
-                return false;
+                
             }
-
-            string query = "INSERT INTO PublicacionesMeGusta ([IdPublicación], IdUsuario) VALUES (@idPublicacion, @idUsuario)";
-            int filasAfectadas = connection.Execute(query, new { idPublicacion, idUsuario });
-            return filasAfectadas > 0;
+            else
+            {
+                string query = "INSERT INTO PublicacionesMeGusta ([IdPublicación], IdUsuario) VALUES (@idPublicacion, @idUsuario)";
+                filasAfectadas = connection.Execute(query, new { idPublicacion, idUsuario });
+            }
         }
+        if (existe > 0)
+        {
+           return false; 
+        }
+        return filasAfectadas > 0;
     }
 
     public bool RegistrarComentario(int idPublicacion, int idUsuario, string texto)
@@ -117,13 +131,14 @@ public class BD
         {
             return false;
         }
-
+        int filasAfectadas;
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             string query = "INSERT INTO Comentarios (IdPublicacion, IdUsuarioComenta, Texto, FechaComentario) VALUES (@idPublicacion, @idUsuario, @texto, @fechaComentario)";
-            int filasAfectadas = connection.Execute(query, new { idPublicacion, idUsuario, texto, fechaComentario = DateTime.Now });
-            return filasAfectadas > 0;
+            filasAfectadas = connection.Execute(query, new { idPublicacion, idUsuario, texto, fechaComentario = DateTime.Now });
+            
         }
+        return filasAfectadas > 0;
     }
 
     public bool ActualizarContraseña(int usuarioId, string nuevoContraseña)

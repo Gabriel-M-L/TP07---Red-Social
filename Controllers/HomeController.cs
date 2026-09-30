@@ -36,69 +36,36 @@ public class HomeController : Controller
     }
 
     [HttpPost]
-    public IActionResult ToggleLike(int publicacionId)
+    public object ToggleLike(int publicacionId)
     {
-        if (HttpContext.Session.GetString("id") == null)
-        {
-            return Json(new { success = false, message = "Debe iniciar sesión" });
-        }
-
         int usuarioId = int.Parse(HttpContext.Session.GetString("id"));
         BD bd = new BD();
-
-        if (!bd.ExistePublicacion(publicacionId))
-        {
-            return Json(new { success = false, message = "La publicación no existe" });
-        }
-
         var resultado = bd.AlternarLike(publicacionId, usuarioId);
 
-        return Json(new
+        return new
         {
-            success = true,
             liked = resultado.liked,
             likes = resultado.totalLikes
-        });
+        };
     }
 
     [HttpPost]
-    public IActionResult AgregarComentario(int publicacionId, string texto)
+    public Comentario? AgregarComentario(int publicacionId, string texto)
     {
         if (HttpContext.Session.GetString("id") == null)
         {
-            return Json(new { success = false, message = "Debe iniciar sesión" });
+            return null;
         }
 
         int usuarioId = int.Parse(HttpContext.Session.GetString("id"));
         BD bd = new BD();
 
-        if (!bd.ExistePublicacion(publicacionId))
-        {
-            return Json(new { success = false, message = "La publicación no existe" });
-        }
-
         if (string.IsNullOrWhiteSpace(texto))
         {
-            return Json(new { success = false, message = "El comentario no puede estar vacío" });
+            return null;
         }
 
-        Comentario? comentario = bd.CrearComentario(publicacionId, usuarioId, texto.Trim());
-        if (comentario == null)
-        {
-            return Json(new { success = false, message = "No se pudo guardar el comentario" });
-        }
-
-        return Json(new
-        {
-            success = true,
-            comentario = new
-            {
-                id = comentario.Id,
-                usuarioNombre = comentario.UsuarioNombre,
-                texto = comentario.Texto,
-                fechaComentario = comentario.FechaComentario.ToString("dd/MM/yyyy HH:mm")
-            }
-        });
+        return bd.CrearComentario(publicacionId, usuarioId, texto.Trim());
     }
 
     public IActionResult Logout()
@@ -106,7 +73,7 @@ public class HomeController : Controller
         HttpContext.Session.Clear();
         return RedirectToAction("Login");
     }
-    public IActionResult RegistroUsuario(string nombreUsuario, string Contraseña, string nombre, string apellido, string tipoUsuario, string email)
+    public IActionResult RegistroUsuario(string nombreUsuario, string Contraseña, string nombre, string apellido)
     {
         BD bd = new BD();
         if(bd.RegistrarUsuario(nombreUsuario, Contraseña, nombre, apellido))
@@ -153,11 +120,11 @@ public class HomeController : Controller
     }
 
     [HttpGet]
-    public IActionResult ObtenerMas(int desde)
+    public List<Publicacion> ObtenerMas(int desde)
     {
         if (HttpContext.Session.GetString("id") == null)
         {
-            return Json(new { success = false, message = "Debe iniciar sesión" });
+            return new List<Publicacion>();
         }
 
         int usuarioId = int.Parse(HttpContext.Session.GetString("id"));
@@ -170,27 +137,7 @@ public class HomeController : Controller
             publicacion.Comentarios = bd.ObtenerComentariosPorPublicacion(publicacion.Id);
         }
 
-        var resultado = publicaciones.Select(p => new
-        {
-            id = p.Id,
-            titulo = p.Titulo,
-            descripcion = p.Descripcion,
-            imagen = string.IsNullOrWhiteSpace(p.Imagen)
-                ? $"https://placehold.co/900x500?text={Uri.EscapeDataString(p.Titulo)}"
-                : $"/images/{p.Imagen}",
-            usuarioNombre = p.UsuarioNombre,
-            fechaPublicacion = p.FechaPublicacion.ToString("dd/MM/yyyy HH:mm"),
-            cantidadMeGustas = p.CantidadMeGustas,
-            meGustaUsuario = p.MeGustaUsuario,
-            comentarios = p.Comentarios.Select(c => new
-            {
-                usuarioNombre = c.UsuarioNombre,
-                texto = c.Texto,
-                fechaComentario = c.FechaComentario.ToString("dd/MM/yyyy HH:mm")
-            }).ToList()
-        }).ToList();
-
-        return Json(new { success = true, publicaciones = resultado });
+        return publicaciones;
     }
 
     [HttpPost]
